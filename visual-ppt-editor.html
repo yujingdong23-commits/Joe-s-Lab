@@ -1,0 +1,1682 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<link rel="icon" href="data:," />
+<title>LIKEAI 可视化 HTML PPT 编辑器</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #12161c;
+    --panel-2: #171d25;
+    --paper: #f5efe3;
+    --muted: #9aa5b1;
+    --line: #27313d;
+    --ink: #10141a;
+    --blue: #315cff;
+    --blue-soft: #6d86ff;
+    --orange: #ff6a3d;
+    --green: #30d98f;
+    --danger: #ff4d57;
+    --topbar: 72px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --display: "Arial Black", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    overflow: hidden;
+    background:
+      linear-gradient(120deg, rgba(49,92,255,.14), transparent 28%),
+      linear-gradient(180deg, #0b0d10, #0e1217 72%, #0b0d10);
+    color: var(--paper);
+    font: 14px/1.5 var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select, textarea { font: inherit; }
+  button {
+    min-height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 7px 13px;
+    background: transparent;
+    color: var(--paper);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    transition: transform .14s ease, border-color .14s ease, background .14s ease, color .14s ease;
+    white-space: nowrap;
+  }
+  button:hover:not(:disabled) {
+    border-color: var(--blue-soft);
+    background: rgba(49,92,255,.12);
+    transform: translateY(-1px);
+  }
+  button:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; }
+  button:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+  button.primary {
+    border-color: var(--blue);
+    background: var(--blue);
+    color: white;
+    box-shadow: 0 18px 40px rgba(49,92,255,.24);
+  }
+  button.success {
+    border-color: rgba(48,217,143,.55);
+    color: var(--green);
+  }
+  button.danger { color: var(--danger); }
+  .app {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  header {
+    min-height: var(--topbar);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px 18px 12px 20px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(11,13,16,.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 220px;
+  }
+  .brand-mark {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    padding: 5px 12px 3px;
+    transform: rotate(-1.5deg);
+    background: var(--paper);
+    color: var(--blue);
+    font-family: var(--display);
+    font-size: 28px;
+    line-height: .95;
+  }
+  .brand-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .brand-copy strong {
+    color: var(--paper);
+    font-size: 15px;
+    font-weight: 900;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+  .brand-copy span {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+  }
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    max-width: 300px;
+    min-height: 34px;
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--panel);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .status-pill::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    flex: 0 0 auto;
+  }
+  .status-pill.dirty::before { background: var(--orange); }
+  .status-pill[hidden] { display: none; }
+  main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+  .source-scrim[hidden] { display: none; }
+  .source-scrim {
+    position: fixed;
+    z-index: 60;
+    inset: var(--topbar) 0 0;
+    background: rgba(0,0,0,.38);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+  .source-pane {
+    position: fixed;
+    z-index: 70;
+    top: var(--topbar);
+    left: 0;
+    bottom: 0;
+    width: min(560px, calc(100vw - 28px));
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--line);
+    background: var(--panel);
+    box-shadow: 28px 0 70px rgba(0,0,0,.45);
+    transform: translateX(-102%);
+    transition: transform .22s ease;
+  }
+  .source-pane.open { transform: translateX(0); }
+  .source-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    background: #0b0d10;
+  }
+  .source-title {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .source-title strong { font-weight: 900; }
+  .source-title span {
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .icon-btn {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+  }
+  textarea {
+    flex: 1;
+    min-height: 0;
+    resize: none;
+    border: 0;
+    outline: 0;
+    padding: 18px 20px;
+    background: #090b0e;
+    color: var(--paper);
+    font: 13px/1.6 var(--mono);
+    tab-size: 2;
+    caret-color: var(--orange);
+  }
+  .preview-pane {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .preview-head {
+    min-height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(13,17,22,.86);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .preview-head strong {
+    color: var(--paper);
+    font-size: 12px;
+  }
+  .preview-hint {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--sans);
+    font-size: 12px;
+  }
+  .frame-shell {
+    flex: 1;
+    min-height: 0;
+    padding: 14px;
+    background:
+      linear-gradient(90deg, rgba(245,239,227,.055) 1px, transparent 1px),
+      linear-gradient(180deg, rgba(245,239,227,.055) 1px, transparent 1px),
+      #0b0d10;
+    background-size: 24px 24px;
+  }
+  iframe {
+    width: 100%;
+    height: 100%;
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: white;
+    box-shadow: 0 24px 70px rgba(0,0,0,.46);
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    z-index: 120;
+    max-width: min(560px, calc(100vw - 32px));
+    padding: 10px 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: rgba(18,22,28,.96);
+    color: var(--paper);
+    box-shadow: 0 18px 50px rgba(0,0,0,.34);
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 800;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(8px);
+    transition: opacity .18s ease, transform .18s ease;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast.err {
+    border-color: rgba(255,77,87,.7);
+    background: #3a1116;
+    color: #ffd8dc;
+  }
+  .file-modal[hidden] { display: none; }
+  .file-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+  }
+  .file-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.58);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .file-panel {
+    position: relative;
+    width: min(560px, calc(100vw - 32px));
+    max-height: min(680px, calc(100vh - 48px));
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: 0 28px 80px rgba(0,0,0,.48);
+    animation: modalIn .18s ease forwards;
+  }
+  @keyframes modalIn {
+    from { transform: translateY(8px) scale(.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .file-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px 22px 12px;
+  }
+  .file-head p {
+    margin: 0 0 4px;
+    color: var(--orange);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+  }
+  .file-head h2 {
+    margin: 0;
+    font-size: 22px;
+    line-height: 1.2;
+  }
+  .file-sub {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .file-list {
+    overflow: auto;
+    padding: 8px 14px 16px;
+  }
+  .file-option {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 40px minmax(0,1fr) auto;
+    align-items: center;
+    gap: 12px;
+    margin: 6px 0;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: left;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--sans);
+  }
+  .file-option:hover {
+    background: rgba(49,92,255,.14);
+  }
+  .file-icon {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 7px;
+    background: var(--paper);
+    color: var(--blue);
+    font-family: var(--display);
+    font-size: 13px;
+  }
+  .file-name {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--paper);
+    font-weight: 800;
+  }
+  .file-meta {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .file-pick {
+    color: var(--green);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 900;
+  }
+  .file-foot {
+    display: flex;
+    justify-content: flex-end;
+    padding: 14px 22px 20px;
+    border-top: 1px solid var(--line);
+  }
+  @media (max-width: 920px) {
+    :root { --topbar: 168px; }
+    header {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .actions {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+    .preview-head {
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">
+      <span class="brand-mark">LIKEAI</span>
+      <span class="brand-copy">
+        <strong>可视化 HTML PPT 编辑器</strong>
+        <span>text style · color · media · export</span>
+      </span>
+    </div>
+    <div class="actions">
+      <button id="openFolderBtn" class="primary" title="打开包含 HTML 和 assets 的文件夹">打开文件夹</button>
+      <span id="folderStatus" class="status-pill" hidden></span>
+      <button id="sourceBtn" title="查看或手动修改 HTML 源码">源码</button>
+      <button id="loadDemo">载入示例</button>
+      <button id="overwriteBtn" class="success" disabled title="先打开包含 HTML 的文件夹">覆盖原文件</button>
+      <button id="exportBtn" class="primary">导出新文件</button>
+    </div>
+  </header>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="file-modal" id="filePickerModal" hidden role="dialog" aria-modal="true" aria-labelledby="filePickerTitle">
+    <div class="file-scrim" data-file-picker-cancel></div>
+    <section class="file-panel">
+      <div class="file-head">
+        <div>
+          <p>Open folder</p>
+          <h2 id="filePickerTitle">选择要编辑的 HTML</h2>
+          <div class="file-sub" id="filePickerSub">这个文件夹里有多个 HTML 文件。</div>
+        </div>
+        <button class="icon-btn" type="button" id="filePickerClose" title="关闭">×</button>
+      </div>
+      <div class="file-list" id="filePickerList"></div>
+      <div class="file-foot">
+        <button type="button" id="filePickerCancel">取消</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="source-scrim" id="sourceScrim" hidden></div>
+  <main>
+    <section class="source-pane" id="sourcePane">
+      <div class="source-head">
+        <span class="source-title">
+          <strong>HTML 源码</strong>
+          <span>可手动修复；编辑后会重新渲染预览</span>
+        </span>
+        <button class="icon-btn" id="closeSourceBtn" title="关闭源码">×</button>
+      </div>
+      <textarea id="srcInput" spellcheck="false" placeholder="打开 HTML 或粘贴源码后即可编辑。"></textarea>
+    </section>
+
+    <section class="preview-pane">
+      <div class="preview-head">
+        <strong>预览与可视化编辑</strong>
+        <span class="preview-hint">点击文字可改内容、颜色、字号、背景和字形 · 点击图片/视频可替换</span>
+      </div>
+      <div class="frame-shell">
+        <iframe id="preview" sandbox="allow-same-origin allow-scripts allow-popups"></iframe>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+(() => {
+  const srcInput = document.getElementById('srcInput');
+  const preview = document.getElementById('preview');
+  const exportBtn = document.getElementById('exportBtn');
+  const loadDemo = document.getElementById('loadDemo');
+  const openFolderBtn = document.getElementById('openFolderBtn');
+  const overwriteBtn = document.getElementById('overwriteBtn');
+  const folderStatus = document.getElementById('folderStatus');
+  const sourceBtn = document.getElementById('sourceBtn');
+  const sourcePane = document.getElementById('sourcePane');
+  const sourceScrim = document.getElementById('sourceScrim');
+  const closeSourceBtn = document.getElementById('closeSourceBtn');
+  const toastEl = document.getElementById('toast');
+  const filePickerModal = document.getElementById('filePickerModal');
+  const filePickerList = document.getElementById('filePickerList');
+  const filePickerSub = document.getElementById('filePickerSub');
+  const filePickerClose = document.getElementById('filePickerClose');
+  const filePickerCancel = document.getElementById('filePickerCancel');
+
+  const SUPPORTS_FSA = typeof window.showDirectoryPicker === 'function';
+  const EDITABLE_TAGS = new Set([
+    'P','SPAN','H1','H2','H3','H4','H5','H6','LI','A','BUTTON','LABEL','TD','TH',
+    'BLOCKQUOTE','FIGCAPTION','STRONG','EM','SMALL','DT','DD','SUMMARY','CAPTION','DIV'
+  ]);
+
+  let dirHandle = null;
+  let assetsDirHandle = null;
+  let htmlHandle = null;
+  let htmlName = null;
+  let isDirty = false;
+  let sourceTimer = null;
+  const blobURLs = [];
+
+  function showToast(msg, isErr) {
+    toastEl.textContent = msg;
+    toastEl.classList.toggle('err', !!isErr);
+    toastEl.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+  }
+
+  function setDirty(next) {
+    isDirty = !!next;
+    updateFileUI();
+  }
+
+  function updateFileUI() {
+    overwriteBtn.disabled = !htmlHandle;
+    overwriteBtn.title = htmlHandle ? '原地覆盖 ' + htmlName : '先打开包含 HTML 的文件夹';
+    if (htmlName || dirHandle) {
+      folderStatus.textContent = (dirHandle ? (dirHandle.name || '已打开文件夹') + ' / ' : '') + (htmlName || '未命名') + (isDirty ? ' · 有修改' : ' · 已同步');
+      folderStatus.classList.toggle('dirty', isDirty);
+      folderStatus.hidden = false;
+    } else {
+      folderStatus.hidden = true;
+    }
+  }
+
+  if (!SUPPORTS_FSA) {
+    openFolderBtn.disabled = true;
+    openFolderBtn.title = '当前浏览器不支持文件系统访问，请使用电脑端 Chrome / Edge / Arc';
+  }
+
+  function freeBlobURLs() {
+    while (blobURLs.length) URL.revokeObjectURL(blobURLs.pop());
+  }
+
+  async function ensureAssetsDir() {
+    if (assetsDirHandle) return assetsDirHandle;
+    if (!dirHandle) return null;
+    assetsDirHandle = await dirHandle.getDirectoryHandle('assets', { create: true });
+    return assetsDirHandle;
+  }
+
+  function sanitizeAssetName(raw, fallbackBase) {
+    const fallback = fallbackBase || 'media';
+    const original = String(raw || '').trim();
+    const dot = original.lastIndexOf('.');
+    const hasExt = dot > 0 && dot < original.length - 1;
+    const rawBase = hasExt ? original.slice(0, dot) : original;
+    const rawExt = hasExt ? original.slice(dot) : '';
+    const base = rawBase
+      .replace(/[^\p{L}\p{N}._-]+/gu, '-')
+      .replace(/^[.-]+|[.-]+$/g, '') || fallback;
+    const ext = rawExt.replace(/[^A-Za-z0-9.]+/g, '').replace(/^\.+/, '.');
+    return base + ext;
+  }
+
+  async function uniqueAssetName(suggested) {
+    await ensureAssetsDir();
+    const dot = suggested.lastIndexOf('.');
+    const base = dot > 0 ? suggested.slice(0, dot) : suggested;
+    const ext = dot > 0 ? suggested.slice(dot) : '';
+    let name = suggested;
+    let i = 1;
+    while (true) {
+      try {
+        await assetsDirHandle.getFileHandle(name);
+      } catch {
+        return name;
+      }
+      name = base + '-' + i++ + ext;
+    }
+  }
+
+  window.__visualPptWriteAsset = async function(file, kind) {
+    if (!dirHandle || !SUPPORTS_FSA) return null;
+    try {
+      await ensureAssetsDir();
+      const safe = sanitizeAssetName(file.name, kind === 'video' ? 'video' : 'image');
+      const finalName = await uniqueAssetName(safe);
+      const fh = await assetsDirHandle.getFileHandle(finalName, { create: true });
+      const writable = await fh.createWritable();
+      await writable.write(file);
+      await writable.close();
+      const blobURL = URL.createObjectURL(file);
+      blobURLs.push(blobURL);
+      return { relPath: 'assets/' + finalName, blobURL };
+    } catch (e) {
+      console.error(e);
+      showToast('媒体写入失败：' + e.message, true);
+      return null;
+    }
+  };
+
+  window.__visualPptBindAssets = async function(idoc) {
+    if (!assetsDirHandle) return;
+    const nodes = idoc.querySelectorAll('img, video, source');
+    for (const node of nodes) {
+      const orig = node.getAttribute('src') || '';
+      if (!orig.startsWith('assets/')) continue;
+      const name = orig.slice('assets/'.length);
+      if (!name || name.includes('/')) continue;
+      try {
+        const fh = await assetsDirHandle.getFileHandle(name);
+        const file = await fh.getFile();
+        const url = URL.createObjectURL(file);
+        blobURLs.push(url);
+        node.dataset.srcOriginal = orig;
+        node.src = url;
+        if (node.tagName === 'SOURCE' && node.parentElement && node.parentElement.tagName === 'VIDEO') {
+          try { node.parentElement.load(); } catch {}
+        }
+      } catch {
+        // Keep broken references visible to the user.
+      }
+    }
+  };
+
+  window.__visualPptDirty = function() {
+    setDirty(true);
+    scheduleSourceSync();
+  };
+
+  window.__visualPptToast = function(msg, isErr) {
+    showToast(msg, isErr);
+  };
+
+  function chooseHTMLFile(htmls, folderName) {
+    return new Promise(resolve => {
+      filePickerList.innerHTML = '';
+      filePickerSub.textContent = (folderName || '当前文件夹') + ' 里有 ' + htmls.length + ' 个 HTML 文件。';
+      let settled = false;
+      const cleanup = value => {
+        if (settled) return;
+        settled = true;
+        filePickerModal.hidden = true;
+        document.removeEventListener('keydown', onKeydown);
+        filePickerClose.removeEventListener('click', onCancel);
+        filePickerCancel.removeEventListener('click', onCancel);
+        filePickerModal.querySelector('[data-file-picker-cancel]').removeEventListener('click', onCancel);
+        resolve(value);
+      };
+      const onCancel = () => cleanup(null);
+      const onKeydown = e => {
+        if (e.key === 'Escape') cleanup(null);
+      };
+
+      htmls.forEach((item, index) => {
+        const option = document.createElement('button');
+        option.type = 'button';
+        option.className = 'file-option';
+        option.innerHTML =
+          '<span class="file-icon">HTML</span>' +
+          '<span><span class="file-name"></span><span class="file-meta">网页文件 · #' + (index + 1) + '</span></span>' +
+          '<span class="file-pick">打开</span>';
+        option.querySelector('.file-name').textContent = item.name;
+        option.addEventListener('click', () => cleanup(item));
+        filePickerList.appendChild(option);
+      });
+
+      filePickerClose.addEventListener('click', onCancel);
+      filePickerCancel.addEventListener('click', onCancel);
+      filePickerModal.querySelector('[data-file-picker-cancel]').addEventListener('click', onCancel);
+      document.addEventListener('keydown', onKeydown);
+      filePickerModal.hidden = false;
+      requestAnimationFrame(() => filePickerList.querySelector('.file-option')?.focus());
+    });
+  }
+
+  async function openFolder() {
+    if (!SUPPORTS_FSA) return;
+    try {
+      const dh = await window.showDirectoryPicker({ mode: 'readwrite' });
+      let perm = await dh.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await dh.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        showToast('未授予读写权限', true);
+        return;
+      }
+
+      const htmls = [];
+      for await (const [name, handle] of dh.entries()) {
+        if (handle.kind === 'file' && /\.html?$/i.test(name)) htmls.push({ name, handle });
+      }
+      htmls.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hans-CN', { numeric: true, sensitivity: 'base' }));
+      if (!htmls.length) {
+        showToast('文件夹里没有 .html 文件', true);
+        return;
+      }
+
+      let chosen = htmls[0];
+      if (htmls.length > 1) {
+        chosen = await chooseHTMLFile(htmls, dh.name);
+        if (!chosen) return;
+      }
+
+      freeBlobURLs();
+      dirHandle = dh;
+      htmlHandle = chosen.handle;
+      htmlName = chosen.name;
+      assetsDirHandle = null;
+      try { assetsDirHandle = await dh.getDirectoryHandle('assets'); } catch {}
+
+      const file = await htmlHandle.getFile();
+      const text = await file.text();
+      srcInput.value = text;
+      renderPreview(text);
+      setDirty(false);
+      showToast('已打开 ' + (dh.name || '') + ' / ' + htmlName);
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.error(e);
+        showToast('打开失败：' + e.message, true);
+      }
+    }
+  }
+
+  openFolderBtn.addEventListener('click', openFolder);
+
+  const INJECTED_STYLE = `
+    [data-editor-editable="true"] {
+      outline: 1px dashed transparent;
+      outline-offset: 2px;
+      transition: outline-color .14s ease, box-shadow .14s ease;
+      cursor: text;
+    }
+    [data-editor-editable="true"]:hover { outline-color: rgba(255,106,61,.72); }
+    [data-editor-editable="true"]:focus {
+      outline: 2px solid #ff6a3d;
+      box-shadow: 0 0 0 4px rgba(255,106,61,.16);
+    }
+    [data-media-editable="true"] {
+      cursor: pointer;
+      outline: 2px solid transparent;
+      transition: filter .14s ease, outline-color .14s ease;
+    }
+    [data-media-editable="true"]:hover {
+      filter: brightness(.94);
+      outline-color: rgba(49,92,255,.72);
+    }
+    [data-media-selected="true"] {
+      outline: 2px solid #315cff !important;
+      box-shadow: 0 0 0 4px rgba(49,92,255,.18);
+    }
+    [data-media-placeholder="true"] {
+      position: relative;
+      min-width: 96px;
+      min-height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      outline: 2px dashed rgba(49,92,255,.68);
+      outline-offset: -2px;
+      background: rgba(16,20,26,.72);
+    }
+    [data-media-placeholder="true"]::after {
+      content: '插入图片';
+      padding: 7px 11px 6px;
+      border-radius: 999px;
+      background: #f5efe3;
+      color: #315cff;
+      font: 800 11px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      letter-spacing: .08em;
+      pointer-events: none;
+    }
+    [data-media-placeholder="true"][data-media-kind="video"]::after { content: '插入视频'; }
+    [data-media-placeholder="true"] > *:not(source):not(track) {
+      opacity: .36;
+      pointer-events: none;
+    }
+    #__visual_ppt_toolbar__ {
+      position: absolute;
+      z-index: 2147483647;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      max-width: min(96vw, 760px);
+      padding: 6px;
+      border: 1px solid rgba(245,239,227,.12);
+      border-radius: 999px;
+      background: rgba(10,12,16,.94);
+      color: #f5efe3;
+      box-shadow: 0 18px 48px rgba(0,0,0,.38), 0 0 0 1px rgba(255,255,255,.04) inset;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      opacity: 0;
+      transform: translateY(5px);
+      pointer-events: none;
+      transition: opacity .14s ease, transform .14s ease;
+      user-select: none;
+      font: 800 12px/1 "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    #__visual_ppt_toolbar__.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    #__visual_ppt_toolbar__ button,
+    #__visual_ppt_toolbar__ select,
+    #__visual_ppt_toolbar__ input {
+      height: 30px;
+      border: 0;
+      border-radius: 999px;
+      background: #161c24;
+      color: #f5efe3;
+      font: inherit;
+      font-weight: 800;
+      outline: 0;
+    }
+    #__visual_ppt_toolbar__ button {
+      min-width: 30px;
+      padding: 0 10px;
+      cursor: pointer;
+    }
+    #__visual_ppt_toolbar__ button:hover,
+    #__visual_ppt_toolbar__ select:hover {
+      background: #315cff;
+    }
+    #__visual_ppt_toolbar__ button.active {
+      background: #f5efe3;
+      color: #10141a;
+    }
+    #__visual_ppt_toolbar__ select {
+      width: 108px;
+      padding: 0 10px;
+      cursor: pointer;
+    }
+    #__visual_ppt_toolbar__ input[type="number"] {
+      width: 58px;
+      padding: 0 8px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+    #__visual_ppt_toolbar__ input[type="color"] {
+      width: 32px;
+      padding: 2px;
+      cursor: pointer;
+      background: #f5efe3;
+    }
+    #__visual_ppt_toolbar__ .label {
+      color: #ff6a3d;
+      padding: 0 6px;
+      font: 900 11px/1 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      letter-spacing: .08em;
+      white-space: nowrap;
+    }
+    #__visual_ppt_toolbar__ .sep {
+      width: 1px;
+      height: 20px;
+      margin: 0 2px;
+      background: rgba(245,239,227,.16);
+    }
+  `;
+
+  const RUNTIME_SCRIPT = `
+    (function(){
+      const EDITABLE_TAGS = ${JSON.stringify([...EDITABLE_TAGS])};
+      const editableSet = new Set(EDITABLE_TAGS);
+      const FS_MIN = 8;
+      const FS_MAX = 260;
+      const MEDIA_MIN = 24;
+      const MEDIA_MAX = 4200;
+      const STEP = 1.1;
+      const FONT_OPTIONS = [
+        { label: '默认', value: '' },
+        { label: '黑体', value: '"PingFang SC", "Microsoft YaHei", sans-serif' },
+        { label: '宋体', value: 'SimSun, "Songti SC", serif' },
+        { label: '衬线', value: 'Georgia, "Times New Roman", serif' },
+        { label: '无衬线', value: 'Arial, Helvetica, sans-serif' },
+        { label: '等宽', value: 'ui-monospace, SFMono-Regular, Menlo, monospace' },
+        { label: '标题粗体', value: '"Arial Black", "PingFang SC", sans-serif' }
+      ];
+      const IMG_PLACEHOLDER_SELECTOR = '[data-img-slot],[data-placeholder],.img-slot,.image-slot,.img-placeholder,.placeholder-img';
+      const VIDEO_PLACEHOLDER_SELECTOR = '[data-video-slot],.video-slot,.video-placeholder,.placeholder-video';
+      const IMG_CLASS_RE = /\\b(img-slot|image-slot|img-placeholder|placeholder-img)\\b/g;
+      const VIDEO_CLASS_RE = /\\b(video-slot|video-placeholder|placeholder-video)\\b/g;
+
+      const toolbar = document.createElement('div');
+      toolbar.id = '__visual_ppt_toolbar__';
+      document.body.appendChild(toolbar);
+      let activeTarget = null;
+
+      function markDirty(){
+        try { window.parent.__visualPptDirty(); } catch {}
+      }
+      function toast(msg, isErr){
+        try { window.parent.__visualPptToast(msg, isErr); } catch {}
+      }
+      function directText(el){
+        for (const n of el.childNodes) {
+          if (n.nodeType === Node.TEXT_NODE && n.nodeValue.trim()) return true;
+        }
+        return false;
+      }
+      function isInsideEditorChrome(el){
+        return !!(el && el.closest && el.closest('#__visual_ppt_toolbar__'));
+      }
+      function makeEditable(root){
+        root.querySelectorAll('*').forEach(el => {
+          if (!editableSet.has(el.tagName)) return;
+          if (isInsideEditorChrome(el)) return;
+          if (!directText(el)) return;
+          el.setAttribute('contenteditable', 'true');
+          el.setAttribute('data-editor-editable', 'true');
+          el.setAttribute('spellcheck', 'false');
+        });
+        root.querySelectorAll(IMG_PLACEHOLDER_SELECTOR).forEach(el => markContainerPlaceholder(el, 'image'));
+        root.querySelectorAll(VIDEO_PLACEHOLDER_SELECTOR).forEach(el => markContainerPlaceholder(el, 'video'));
+        root.querySelectorAll('img').forEach(img => {
+          if (isEmptyImg(img)) {
+            markElementPlaceholder(img, 'image');
+            img.addEventListener('error', () => markElementPlaceholder(img, 'image'));
+          } else {
+            setupMedia(img);
+          }
+        });
+        root.querySelectorAll('video').forEach(video => {
+          if (isEmptyVideo(video)) markElementPlaceholder(video, 'video');
+          else setupMedia(video);
+        });
+      }
+      function isEmptyImg(img){
+        const src = (img.getAttribute('src') || '').trim();
+        if (!src) return true;
+        if (/^(about:blank|#|data:,)$/i.test(src)) return true;
+        if (/placeholder/i.test(src)) return true;
+        return img.complete && img.naturalWidth === 0;
+      }
+      function isEmptyVideo(video){
+        const src = (video.getAttribute('src') || '').trim();
+        if (src && !/placeholder/i.test(src)) return false;
+        for (const node of video.querySelectorAll('source')) {
+          const s = (node.getAttribute('src') || '').trim();
+          if (s && !/placeholder/i.test(s)) return false;
+        }
+        return true;
+      }
+      function markContainerPlaceholder(el, kind){
+        if (el.tagName === 'IMG' || el.tagName === 'VIDEO') return;
+        if (el.hasAttribute('data-media-placeholder')) return;
+        el.setAttribute('data-media-placeholder', 'true');
+        el.setAttribute('data-media-kind', kind);
+        el.addEventListener('click', onContainerPlaceholderClick);
+      }
+      function markElementPlaceholder(el, kind){
+        el.setAttribute('data-media-placeholder', 'true');
+        el.setAttribute('data-media-kind', kind);
+        el.style.minWidth = el.style.minWidth || '120px';
+        el.style.minHeight = el.style.minHeight || '80px';
+        el.addEventListener('click', onElementPlaceholderClick);
+      }
+      function setupMedia(el){
+        el.setAttribute('data-media-editable', 'true');
+        el.setAttribute('data-media-kind', el.tagName === 'VIDEO' ? 'video' : 'image');
+        el.addEventListener('click', onMediaClick);
+      }
+      function pickFile(kind, cb){
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = kind === 'video' ? 'video/*' : 'image/*';
+        input.addEventListener('change', () => {
+          const file = input.files && input.files[0];
+          if (file) cb(file);
+        });
+        input.click();
+      }
+      async function applyMediaFile(file, kind, applyFn){
+        let res = null;
+        try { res = await window.parent.__visualPptWriteAsset(file, kind); } catch(e) { console.error(e); }
+        if (res) {
+          applyFn(res.blobURL, res.relPath);
+          markDirty();
+        } else if (kind === 'video') {
+          toast('视频必须先打开文件夹，避免把大文件嵌进 HTML', true);
+        } else {
+          const reader = new FileReader();
+          reader.onload = () => {
+            applyFn(reader.result, null);
+            markDirty();
+          };
+          reader.readAsDataURL(file);
+        }
+      }
+      function onElementPlaceholderClick(e){
+        e.preventDefault();
+        e.stopPropagation();
+        const el = e.currentTarget;
+        const kind = el.getAttribute('data-media-kind') || (el.tagName === 'VIDEO' ? 'video' : 'image');
+        pickFile(kind, file => {
+          applyMediaFile(file, kind, (src, relPath) => {
+            if (el.tagName === 'VIDEO') {
+              el.querySelectorAll('source').forEach(node => node.remove());
+              if (!el.hasAttribute('controls')) el.setAttribute('controls', '');
+            }
+            el.src = src;
+            if (relPath) el.dataset.srcOriginal = relPath;
+            else delete el.dataset.srcOriginal;
+            el.removeAttribute('data-media-placeholder');
+            el.style.minWidth = '';
+            el.style.minHeight = '';
+            setupMedia(el);
+          });
+        });
+      }
+      function onContainerPlaceholderClick(e){
+        e.preventDefault();
+        e.stopPropagation();
+        const el = e.currentTarget;
+        const kind = el.getAttribute('data-media-kind') || 'image';
+        pickFile(kind, file => {
+          applyMediaFile(file, kind, (src, relPath) => {
+            const tag = kind === 'video' ? 'video' : 'img';
+            const media = document.createElement(tag);
+            media.src = src;
+            if (relPath) media.dataset.srcOriginal = relPath;
+            if (kind === 'video') {
+              media.controls = true;
+              media.muted = true;
+              media.playsInline = true;
+            }
+            const classRe = kind === 'video' ? VIDEO_CLASS_RE : IMG_CLASS_RE;
+            if (el.className) media.className = el.className.replace(classRe, '').trim();
+            if (el.id) media.id = el.id;
+            const inline = el.getAttribute('style');
+            if (inline) media.setAttribute('style', inline);
+            const cs = window.getComputedStyle(el);
+            if (!media.style.width && cs.width !== 'auto') media.style.width = cs.width;
+            if (!media.style.height && cs.height !== 'auto' && !inline?.includes('aspect-ratio')) media.style.height = cs.height;
+            media.style.objectFit = kind === 'video' ? 'contain' : (media.style.objectFit || 'cover');
+            setupMedia(media);
+            el.replaceWith(media);
+          });
+        });
+      }
+
+      function sep(){
+        const node = document.createElement('span');
+        node.className = 'sep';
+        return node;
+      }
+      function label(text){
+        const node = document.createElement('span');
+        node.className = 'label';
+        node.textContent = text;
+        return node;
+      }
+      function button(text, title, onClick){
+        const node = document.createElement('button');
+        node.type = 'button';
+        node.textContent = text;
+        node.title = title;
+        node.addEventListener('mousedown', e => e.preventDefault());
+        node.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClick(node);
+        });
+        return node;
+      }
+      function rgbToHex(value){
+        if (!value || value === 'transparent' || value === 'rgba(0, 0, 0, 0)') return '#ffffff';
+        if (value.startsWith('#')) {
+          if (/^#[0-9a-fA-F]{3}$/.test(value)) {
+            return '#' + value[1] + value[1] + value[2] + value[2] + value[3] + value[3];
+          }
+          return value.slice(0, 7).toLowerCase();
+        }
+        const match = value.match(/rgba?\\(([^)]+)\\)/);
+        if (!match) return '#ffffff';
+        const parts = match[1].split(',').slice(0, 3).map(n => parseInt(n.trim(), 10));
+        if (parts.some(Number.isNaN)) return '#ffffff';
+        return '#' + parts.map(n => Math.max(0, Math.min(255, n)).toString(16).padStart(2, '0')).join('');
+      }
+      function fontPx(el){
+        return Math.round(parseFloat(window.getComputedStyle(el).fontSize) || 16);
+      }
+      function setFontSize(el, size){
+        const next = Math.max(FS_MIN, Math.min(FS_MAX, Number(size) || fontPx(el)));
+        el.style.fontSize = next + 'px';
+        const input = toolbar.querySelector('[data-size-input]');
+        if (input) input.value = String(next);
+        markDirty();
+        requestAnimationFrame(() => positionToolbar(el));
+      }
+      function closestFontOption(family){
+        const clean = String(family || '').replace(/[']/g, '"').toLowerCase();
+        const found = FONT_OPTIONS.find(opt => opt.value && clean.includes(opt.value.split(',')[0].replace(/[']/g, '"').toLowerCase()));
+        return found ? found.value : '';
+      }
+      function refreshButtons(el){
+        const cs = window.getComputedStyle(el);
+        const weight = parseInt(cs.fontWeight, 10) || 400;
+        toolbar.querySelector('[data-bold]')?.classList.toggle('active', weight >= 600);
+        toolbar.querySelector('[data-italic]')?.classList.toggle('active', cs.fontStyle === 'italic');
+        toolbar.querySelector('[data-underline]')?.classList.toggle('active', cs.textDecorationLine.includes('underline'));
+      }
+      function showTextToolbar(el){
+        activeTarget = el;
+        const cs = window.getComputedStyle(el);
+        toolbar.innerHTML = '';
+        toolbar.appendChild(label('文字'));
+
+        const family = document.createElement('select');
+        family.title = '字体';
+        FONT_OPTIONS.forEach(item => {
+          const opt = document.createElement('option');
+          opt.value = item.value;
+          opt.textContent = item.label;
+          family.appendChild(opt);
+        });
+        family.value = closestFontOption(cs.fontFamily);
+        family.addEventListener('mousedown', e => e.stopPropagation());
+        family.addEventListener('change', () => {
+          el.style.fontFamily = family.value;
+          markDirty();
+          positionToolbar(el);
+        });
+        toolbar.appendChild(family);
+
+        const bold = button('B', '加粗', node => {
+          const active = node.classList.toggle('active');
+          el.style.fontWeight = active ? '800' : '';
+          markDirty();
+          positionToolbar(el);
+        });
+        bold.dataset.bold = 'true';
+        const italic = button('I', '斜体', node => {
+          const active = node.classList.toggle('active');
+          el.style.fontStyle = active ? 'italic' : '';
+          markDirty();
+          positionToolbar(el);
+        });
+        italic.dataset.italic = 'true';
+        const underline = button('U', '下划线', node => {
+          const active = node.classList.toggle('active');
+          el.style.textDecoration = active ? 'underline' : '';
+          markDirty();
+          positionToolbar(el);
+        });
+        underline.dataset.underline = 'true';
+        toolbar.appendChild(bold);
+        toolbar.appendChild(italic);
+        toolbar.appendChild(underline);
+        toolbar.appendChild(sep());
+
+        toolbar.appendChild(button('A−', '缩小字号', () => setFontSize(el, fontPx(el) - 2)));
+        const size = document.createElement('input');
+        size.type = 'number';
+        size.min = String(FS_MIN);
+        size.max = String(FS_MAX);
+        size.value = String(fontPx(el));
+        size.dataset.sizeInput = 'true';
+        size.title = '字号 px';
+        size.addEventListener('mousedown', e => e.stopPropagation());
+        size.addEventListener('click', e => e.stopPropagation());
+        size.addEventListener('change', () => setFontSize(el, size.value));
+        size.addEventListener('keydown', e => {
+          e.stopPropagation();
+          if (e.key === 'Enter') setFontSize(el, size.value);
+        });
+        toolbar.appendChild(size);
+        toolbar.appendChild(button('A+', '放大字号', () => setFontSize(el, fontPx(el) + 2)));
+        toolbar.appendChild(sep());
+
+        toolbar.appendChild(label('字色'));
+        const textColor = document.createElement('input');
+        textColor.type = 'color';
+        textColor.title = '字体颜色';
+        textColor.value = rgbToHex(cs.color);
+        textColor.addEventListener('input', () => {
+          el.style.color = textColor.value;
+          markDirty();
+        });
+        toolbar.appendChild(textColor);
+
+        toolbar.appendChild(label('背景'));
+        const bgColor = document.createElement('input');
+        bgColor.type = 'color';
+        bgColor.title = '背景颜色';
+        bgColor.value = rgbToHex(cs.backgroundColor);
+        bgColor.addEventListener('input', () => {
+          el.style.backgroundColor = bgColor.value;
+          markDirty();
+        });
+        toolbar.appendChild(bgColor);
+        toolbar.appendChild(button('清背景', '清除背景色', () => {
+          el.style.backgroundColor = '';
+          markDirty();
+        }));
+        toolbar.appendChild(sep());
+        toolbar.appendChild(button('×', '关闭工具条', hideToolbar));
+        refreshButtons(el);
+        positionToolbar(el);
+      }
+      function mediaWidth(el){
+        return el.getBoundingClientRect().width || el.naturalWidth || el.videoWidth || 200;
+      }
+      function setMediaWidth(el, width){
+        const next = Math.max(MEDIA_MIN, Math.min(MEDIA_MAX, Number(width) || mediaWidth(el)));
+        el.style.width = next.toFixed(1) + 'px';
+        el.style.height = 'auto';
+        el.style.maxWidth = 'none';
+        if ((el.getAttribute('data-media-kind') || '') === 'video') el.style.objectFit = 'contain';
+        markDirty();
+        requestAnimationFrame(() => positionToolbar(el));
+      }
+      function showMediaToolbar(el){
+        activeTarget = el;
+        toolbar.innerHTML = '';
+        toolbar.appendChild(label((el.getAttribute('data-media-kind') || '') === 'video' ? '视频' : '图片'));
+        toolbar.appendChild(button('−', '缩小', () => setMediaWidth(el, mediaWidth(el) / STEP)));
+        toolbar.appendChild(button('＋', '放大', () => setMediaWidth(el, mediaWidth(el) * STEP)));
+        toolbar.appendChild(sep());
+        toolbar.appendChild(button('替换', '替换媒体', () => replaceMedia(el)));
+        toolbar.appendChild(button('×', '取消选中', () => {
+          el.removeAttribute('data-media-selected');
+          hideToolbar();
+        }));
+        positionToolbar(el);
+      }
+      function replaceMedia(el){
+        const kind = el.getAttribute('data-media-kind') || (el.tagName === 'VIDEO' ? 'video' : 'image');
+        pickFile(kind, file => {
+          applyMediaFile(file, kind, (src, relPath) => {
+            if (el.tagName === 'VIDEO') el.querySelectorAll('source').forEach(node => node.remove());
+            el.src = src;
+            if (relPath) el.dataset.srcOriginal = relPath;
+            else delete el.dataset.srcOriginal;
+            requestAnimationFrame(() => positionToolbar(el));
+          });
+        });
+      }
+      function positionToolbar(target){
+        if (!target || !target.getBoundingClientRect) return;
+        const rect = target.getBoundingClientRect();
+        const sx = window.scrollX;
+        const sy = window.scrollY;
+        toolbar.style.visibility = 'hidden';
+        toolbar.classList.add('show');
+        const tw = toolbar.offsetWidth;
+        const th = toolbar.offsetHeight;
+        let top = rect.top + sy - th - 12;
+        if (top < sy + 6) top = rect.bottom + sy + 10;
+        let left = rect.left + sx + (rect.width - tw) / 2;
+        left = Math.max(sx + 6, Math.min(left, sx + document.documentElement.clientWidth - tw - 6));
+        toolbar.style.top = top + 'px';
+        toolbar.style.left = left + 'px';
+        toolbar.style.visibility = '';
+      }
+      function hideToolbar(){
+        toolbar.classList.remove('show');
+        if (activeTarget && activeTarget.getAttribute && activeTarget.getAttribute('data-media-editable')) {
+          activeTarget.removeAttribute('data-media-selected');
+        }
+        activeTarget = null;
+      }
+      function onMediaClick(e){
+        e.preventDefault();
+        e.stopPropagation();
+        const el = e.currentTarget;
+        document.querySelectorAll('[data-media-selected]').forEach(node => node.removeAttribute('data-media-selected'));
+        el.setAttribute('data-media-selected', 'true');
+        showMediaToolbar(el);
+      }
+
+      document.addEventListener('focusin', e => {
+        const el = e.target;
+        if (el && el.getAttribute && el.getAttribute('data-editor-editable') === 'true') showTextToolbar(el);
+      });
+      document.addEventListener('click', e => {
+        const editable = e.target.closest && e.target.closest('[data-editor-editable="true"]');
+        if (editable) {
+          showTextToolbar(editable);
+          return;
+        }
+        const link = e.target.closest && e.target.closest('a');
+        if (link) e.preventDefault();
+      }, true);
+      document.addEventListener('input', e => {
+        if (e.target && e.target.getAttribute && e.target.getAttribute('data-editor-editable') === 'true') markDirty();
+      }, true);
+      document.addEventListener('mousedown', e => {
+        if (toolbar.contains(e.target)) return;
+        const editable = e.target.closest && e.target.closest('[data-editor-editable="true"]');
+        const media = e.target.closest && e.target.closest('[data-media-editable="true"]');
+        if (!editable && !media) hideToolbar();
+      }, true);
+      window.addEventListener('scroll', () => { if (activeTarget) positionToolbar(activeTarget); }, true);
+      window.addEventListener('resize', () => { if (activeTarget) positionToolbar(activeTarget); });
+
+      makeEditable(document.body);
+    })();
+  `;
+
+  function injectEditorRuntime(html) {
+    const styleTag = '<style id="__visual_ppt_style__">' + INJECTED_STYLE.replace(/<\/style/gi, '<\\/style') + '</style>';
+    const runtimeWithAssets =
+      '(async function(){' +
+      'try{ if(window.parent && window.parent.__visualPptBindAssets) await window.parent.__visualPptBindAssets(document); }catch(e){ console.error(e); }' +
+      RUNTIME_SCRIPT +
+      '})();';
+    const scriptTag = '<script id="__visual_ppt_runtime__">' + runtimeWithAssets.replace(/<\/script/gi, '<\\/script') + '<\/script>';
+    let next = html;
+    if (/<\/head>/i.test(next)) next = next.replace(/<\/head>/i, styleTag + '</head>');
+    else next = next.replace(/<html([^>]*)>/i, '<html$1><head><meta charset="utf-8">' + styleTag + '</head>');
+    if (/<\/body>/i.test(next)) next = next.replace(/<\/body>/i, scriptTag + '</body>');
+    else next += scriptTag;
+    return next;
+  }
+
+  function renderPreview(html) {
+    const isFull = /<html[\s>]/i.test(html);
+    const finalHTML = isFull ? html : '<!doctype html><html><head><meta charset="utf-8"></head><body>' + html + '</body></html>';
+    preview.srcdoc = injectEditorRuntime(finalHTML);
+  }
+
+  function scheduleSourceRender() {
+    clearTimeout(sourceTimer);
+    sourceTimer = setTimeout(() => {
+      renderPreview(srcInput.value);
+      setDirty(true);
+    }, 220);
+  }
+
+  function scheduleSourceSync() {
+    clearTimeout(scheduleSourceSync._timer);
+    scheduleSourceSync._timer = setTimeout(() => {
+      if (document.activeElement === srcInput) return;
+      const html = buildExportedHTML();
+      if (html) srcInput.value = html;
+    }, 350);
+  }
+
+  srcInput.addEventListener('input', scheduleSourceRender);
+
+  function setSourceOpen(open) {
+    if (open) {
+      const html = buildExportedHTML();
+      if (html) srcInput.value = html;
+    }
+    sourcePane.classList.toggle('open', open);
+    sourceScrim.hidden = !open;
+    sourceBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) requestAnimationFrame(() => srcInput.focus());
+  }
+
+  sourceBtn.setAttribute('aria-expanded', 'false');
+  sourceBtn.addEventListener('click', () => setSourceOpen(!sourcePane.classList.contains('open')));
+  closeSourceBtn.addEventListener('click', () => setSourceOpen(false));
+  sourceScrim.addEventListener('click', () => setSourceOpen(false));
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && sourcePane.classList.contains('open')) setSourceOpen(false);
+  });
+
+  function buildExportedHTML() {
+    const doc = preview.contentDocument;
+    if (!doc || !doc.documentElement) return null;
+    const clone = doc.documentElement.cloneNode(true);
+    clone.querySelectorAll('#__visual_ppt_style__, #__visual_ppt_runtime__, #__visual_ppt_toolbar__').forEach(node => node.remove());
+    cleanupPresentationRuntimeState(clone);
+    clone.querySelectorAll('[contenteditable]').forEach(node => node.removeAttribute('contenteditable'));
+    clone.querySelectorAll('[spellcheck]').forEach(node => {
+      if (node.getAttribute('data-editor-editable') === 'true') node.removeAttribute('spellcheck');
+    });
+    [
+      'data-editor-editable',
+      'data-media-editable',
+      'data-media-selected',
+      'data-media-placeholder',
+      'data-media-kind'
+    ].forEach(attr => clone.querySelectorAll('[' + attr + ']').forEach(node => node.removeAttribute(attr)));
+    clone.querySelectorAll('[data-src-original]').forEach(node => {
+      node.setAttribute('src', node.getAttribute('data-src-original'));
+      node.removeAttribute('data-src-original');
+    });
+    return '<!doctype html>\n' + clone.outerHTML;
+  }
+
+  function cleanupPresentationRuntimeState(root) {
+    const scriptsText = [...root.querySelectorAll('script')].map(script => script.textContent || '').join('\n');
+    const isRuntimeSlideDeck =
+      root.querySelector('#deck') &&
+      root.querySelector('#nav-dots') &&
+      root.querySelector('.slide') &&
+      /navDots\.appendChild|navDots\.append\(|getElementById\(['"]nav-dots['"]\)/.test(scriptsText);
+    if (!isRuntimeSlideDeck) return;
+
+    root.querySelectorAll('#nav-dots').forEach(nav => {
+      nav.querySelectorAll('.nav-dot').forEach(dot => dot.remove());
+    });
+    const slides = root.querySelectorAll('.slide');
+    slides.forEach((slide, index) => slide.classList.toggle('is-active', index === 0));
+    const deck = root.querySelector('#deck');
+    if (deck) deck.style.removeProperty('transform');
+    const progress = root.querySelector('#progress-bar');
+    if (progress && slides.length) progress.style.width = (100 / slides.length) + '%';
+    const counter = root.querySelector('#slide-counter');
+    if (counter && slides.length) counter.textContent = '01 / ' + String(slides.length).padStart(2, '0');
+  }
+
+  function downloadHTML(html, filename) {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function assetNameFromSrc(src) {
+    const raw = (src || '').trim();
+    if (!raw.startsWith('assets/')) return null;
+    const name = raw.slice('assets/'.length).split(/[?#]/)[0];
+    if (!name || name.includes('/')) return null;
+    try {
+      const decoded = decodeURIComponent(name);
+      if (!decoded || decoded.includes('/')) return null;
+      return decoded;
+    } catch {
+      return name;
+    }
+  }
+
+  function collectReferencedAssetNames(html) {
+    const parsed = new DOMParser().parseFromString(html, 'text/html');
+    const names = new Set();
+    parsed.querySelectorAll('img[src], video[src], source[src]').forEach(node => {
+      const name = assetNameFromSrc(node.getAttribute('src'));
+      if (name) names.add(name);
+    });
+    return [...names];
+  }
+
+  async function uniqueExportFileName(dir, suggested) {
+    const safe = (suggested || 'edited-presentation.html')
+      .replace(/[\\/:*?"<>|\x00-\x1F]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'edited-presentation.html';
+    const withExt = /\.html?$/i.test(safe) ? safe : safe + '.html';
+    const dot = withExt.lastIndexOf('.');
+    const base = dot > 0 ? withExt.slice(0, dot) : withExt;
+    const ext = dot > 0 ? withExt.slice(dot) : '.html';
+    let name = withExt;
+    let i = 1;
+    while (true) {
+      try {
+        await dir.getFileHandle(name);
+      } catch {
+        return name;
+      }
+      name = base + '-' + i++ + ext;
+    }
+  }
+
+  async function copyReferencedAssetsTo(assetNames, outDir) {
+    if (!assetNames.length) return { copied: 0, missing: [] };
+    const missing = [];
+    let copied = 0;
+    let outAssets = null;
+    for (const name of assetNames) {
+      if (!assetsDirHandle) {
+        missing.push(name);
+        continue;
+      }
+      try {
+        const srcHandle = await assetsDirHandle.getFileHandle(name);
+        const file = await srcHandle.getFile();
+        if (!outAssets) outAssets = await outDir.getDirectoryHandle('assets', { create: true });
+        const destHandle = await outAssets.getFileHandle(name, { create: true });
+        const writable = await destHandle.createWritable();
+        await writable.write(file);
+        await writable.close();
+        copied++;
+      } catch (e) {
+        console.warn('copy asset failed', name, e);
+        missing.push(name);
+      }
+    }
+    return { copied, missing };
+  }
+
+  async function exportHTML(html) {
+    const filename = htmlName || 'edited-presentation.html';
+    const assetNames = collectReferencedAssetNames(html);
+    if (!SUPPORTS_FSA || !assetNames.length) {
+      downloadHTML(html, filename);
+      setDirty(false);
+      if (assetNames.length) showToast('已导出 HTML；当前浏览器不能自动导出 assets，请手动复制资源文件夹', true);
+      else showToast('已导出新文件');
+      return;
+    }
+
+    try {
+      const outDir = await window.showDirectoryPicker({ mode: 'readwrite' });
+      let perm = await outDir.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await outDir.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        showToast('未授予导出目录写入权限', true);
+        return;
+      }
+      const outName = await uniqueExportFileName(outDir, filename);
+      const htmlOut = await outDir.getFileHandle(outName, { create: true });
+      const writable = await htmlOut.createWritable();
+      await writable.write(html);
+      await writable.close();
+      const result = await copyReferencedAssetsTo(assetNames, outDir);
+      setDirty(false);
+      if (result.missing.length) showToast('已导出 ' + outName + '，但有 ' + result.missing.length + ' 个资源未复制', true);
+      else showToast('已导出 ' + outName + '，并复制 ' + result.copied + ' 个资源');
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.error(e);
+        showToast('导出失败：' + e.message, true);
+      }
+    }
+  }
+
+  exportBtn.addEventListener('click', async () => {
+    const html = buildExportedHTML();
+    if (!html) return;
+    await exportHTML(html);
+  });
+
+  overwriteBtn.addEventListener('click', async () => {
+    if (!htmlHandle) return;
+    const html = buildExportedHTML();
+    if (!html) return;
+    if (!confirm('确认覆盖 ' + htmlName + '？此操作不可撤销。')) return;
+    try {
+      let perm = await htmlHandle.queryPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') perm = await htmlHandle.requestPermission({ mode: 'readwrite' });
+      if (perm !== 'granted') {
+        showToast('未授予写入权限', true);
+        return;
+      }
+      const writable = await htmlHandle.createWritable();
+      await writable.write(html);
+      await writable.close();
+      srcInput.value = html;
+      setDirty(false);
+      showToast('已覆盖 ' + htmlName);
+    } catch (e) {
+      console.error(e);
+      showToast('覆盖失败：' + e.message, true);
+    }
+  });
+
+  const demo = `<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>示例 HTML PPT</title>
+<style>
+  :root{--bg:#0b0d10;--paper:#f5efe3;--muted:#9aa5b1;--blue:#315cff;--orange:#ff6a3d;--green:#30d98f;--line:#27313d;--sans:"PingFang SC","Microsoft YaHei",sans-serif;--display:"Arial Black","PingFang SC",sans-serif}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--paper);font:16px/1.6 var(--sans);overflow:hidden}
+  .deck{width:100vw;height:100vh;display:flex;overflow:hidden;scroll-snap-type:x mandatory}
+  .slide{position:relative;min-width:100vw;height:100vh;display:grid;align-content:center;padding:7vw;scroll-snap-align:start;border-right:1px solid var(--line)}
+  .kicker{width:max-content;border:1px solid var(--paper);border-radius:999px;padding:8px 14px;font:800 12px/1 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase}
+  h1{max-width:920px;margin:26px 0 18px;font:900 clamp(52px,8vw,112px)/.92 var(--display);letter-spacing:.01em}
+  h1 span{display:inline-block;background:var(--paper);color:var(--blue);padding:8px 18px 4px;transform:rotate(-1.2deg)}
+  .lead{max-width:58ch;margin:0;color:#d8d1c5;font-size:clamp(18px,2vw,25px)}
+  .grid{display:grid;grid-template-columns:1.05fr .95fr;gap:5vw;align-items:center}
+  .image{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:18px;border:1px solid var(--line)}
+  .note{max-width:46ch;color:var(--muted);font-size:18px}
+  .tag{color:var(--orange);font-weight:900}
+  .tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-top:32px}
+  .tile{border:1px solid var(--line);border-radius:12px;padding:22px;background:#12161c}
+  .tile h3{margin:0 0 8px;font-size:24px}
+  .tile p{margin:0;color:var(--muted)}
+  @media(max-width:760px){.slide{padding:38px 24px}.grid{grid-template-columns:1fr}.tiles{grid-template-columns:1fr}body{overflow:auto}.deck{display:block;overflow:auto}.slide{min-width:0;height:auto;min-height:100vh}}
+</style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide">
+      <span class="kicker">LIKEAI Studio</span>
+      <h1><span>HTML PPT</span><br>可视化编辑</h1>
+      <p class="lead">点击这段文字，试试修改字体颜色、字号、背景颜色、加粗、斜体、下划线和字体。</p>
+    </section>
+    <section class="slide">
+      <div class="grid">
+        <div>
+          <span class="kicker">Visual control</span>
+          <h1>把样式改在画面里</h1>
+          <p class="note">选中文字会弹出工具条。你可以给重点词加 <span class="tag">颜色</span>，也可以给标题换字形。</p>
+        </div>
+        <img class="image" src="https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=1200&q=80" alt="workspace">
+      </div>
+    </section>
+    <section class="slide">
+      <span class="kicker">Slots</span>
+      <h1>图片和视频也能换</h1>
+      <div class="tiles">
+        <div class="tile"><h3>字体颜色</h3><p>用色块直接选择。</p></div>
+        <div class="tile"><h3>背景颜色</h3><p>适合给标签和标题做强调。</p></div>
+        <div class="tile"><h3>字体样式</h3><p>粗体、斜体、下划线、字体族。</p></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>`;
+
+  loadDemo.addEventListener('click', () => {
+    htmlName = null;
+    htmlHandle = null;
+    dirHandle = null;
+    assetsDirHandle = null;
+    freeBlobURLs();
+    srcInput.value = demo;
+    renderPreview(demo);
+    setDirty(false);
+    showToast('已载入示例');
+  });
+
+  loadDemo.click();
+})();
+</script>
+</body>
+</html>
